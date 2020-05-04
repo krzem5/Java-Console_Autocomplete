@@ -12,10 +12,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.Exception;
 import java.lang.Math;
+import java.lang.Character;
+import java.util.List;
+import java.util.ArrayList;
 
 
 
-public class Autocomplete{
+public abstract class Autocomplete{
 	public static final class ANSI{
 		public static final String RESET_ALL="\033[0m";
 
@@ -105,32 +108,112 @@ public class Autocomplete{
 
 
 
-	public String get(){
+	public abstract String autocomplete(String s);
+
+
+
+	public abstract String highlight(String s);
+
+
+
+	public final String match(String s,String[] l){
+		String o=null;
+		double b=0;
+		for (String t:l){
+			if (t.startsWith(s)==false){
+				continue;
+			}
+			double v=(double)s.length()/t.length();
+			if (v>b&&v<1){
+				o=t;
+				b=v;
+			}
+		}
+		return o;
+	}
+
+
+
+	public final String get(){
 		try{
 			String bf="";
+			String bf_a=null;
+			List<String> ctrl_z=new ArrayList<String>();
 			while (true){
 				char c=(char)this._r.read();
 				switch ((int)c){
 					case 3:
+						System.out.print(String.format(Autocomplete.ANSI.CURSOR.ERASE_LINE+Autocomplete.ANSI.CURSOR.COLUMN+Autocomplete.ANSI.RESET_ALL,2,1));
 						System.exit(1);
 						break;
 					case 8:
-						bf=bf.substring(0,Math.max(bf.length()-1,0));
+						ctrl_z.add(bf+"");
+						if (bf_a==null){
+							bf=bf.substring(0,Math.max(bf.length()-1,0));
+						}
+						else{
+							bf=bf_a;
+							bf_a=null;
+						}
+						break;
+					case 9:
+						String ac=this.autocomplete(bf);
+						ctrl_z.add(bf+"");
+						if (ac.length()>0&&bf_a==null){
+							bf_a=bf+"";
+							bf+=ac;
+						}
+						else{
+							bf+="\t";
+							bf_a=null;
+						}
 						break;
 					case 13:
-						System.out.print(String.format(Autocomplete.ANSI.CURSOR.ERASE_LINE+Autocomplete.ANSI.CURSOR.COLUMN,1,1));
+						System.out.print(String.format(Autocomplete.ANSI.CURSOR.ERASE_LINE+Autocomplete.ANSI.CURSOR.COLUMN,2,1));
 						return bf;
+					case 65535:
+						bf=(ctrl_z.size()>0?ctrl_z.remove(ctrl_z.size()-1):bf);
+						bf_a=null;
+						break;
 					default:
-						bf+=String.valueOf(c);
+						if (Character.isISOControl((int)c)==false){
+							ctrl_z.add(bf+"");
+							bf+=String.valueOf(c);
+							bf_a=null;
+						}
 						break;
 				}
-				System.out.print(String.format(Autocomplete.ANSI.CURSOR.ERASE_LINE+Autocomplete.ANSI.CURSOR.COLUMN,1,1)+Autocomplete.ANSI.RESET_ALL+bf+Autocomplete.ANSI.RESET_ALL);
+				System.out.print(String.format(Autocomplete.ANSI.CURSOR.ERASE_LINE+Autocomplete.ANSI.CURSOR.COLUMN+Autocomplete.ANSI.RESET_ALL+this._escape(bf).replace("\t","    ")+Autocomplete.ANSI.FOREGROUND.BLACK+Autocomplete.ANSI.BRIGHT+this.autocomplete(bf)+Autocomplete.ANSI.RESET_ALL+Autocomplete.ANSI.CURSOR.COLUMN,2,1,bf.replace("\t","    ").length()+1));
 			}
 		}
 		catch (Exception e){
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+
+
+	private String _escape(String s){
+		s=this.highlight(s);
+		int i=0;
+		String o="";
+		while (i<s.length()){
+			if (s.charAt(i)=='{'&&(i==s.length()-1||s.charAt(i+1)!='{')){
+				String[] cl=s.substring(i+1).split("}")[0].split(",");
+				o+=String.format(Autocomplete.ANSI.FOREGROUND.CUSTOM,Integer.parseInt(cl[0]),Integer.parseInt(cl[1]),Integer.parseInt(cl[2]));
+				i+=String.join(",",cl).length()+1;
+			}
+			else{
+				if (s.charAt(i)=='{'){
+					o+="{";
+					i++;
+				}
+				o+=s.substring(i,i+1);
+			}
+			i++;
+		}
+		return o;
 	}
 
 
