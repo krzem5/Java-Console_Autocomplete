@@ -124,7 +124,7 @@ public abstract class Autocomplete{
 				continue;
 			}
 			double v=(double)s.length()/t.length();
-			if (v>b&&v<1){
+			if (v>b){
 				o=t;
 				b=v;
 			}
