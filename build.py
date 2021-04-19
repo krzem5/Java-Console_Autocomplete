@@ -26,7 +26,7 @@ for r,_,fl in os.walk("src"):
 			ml.append(r+f)
 if (subprocess.run(["javac","-cp",(";" if os.name=="nt" else ":").join(ml),"-d","build"]+jfl).returncode!=0):
 	sys.exit(1)
-with zipfile.ZipFile("build/color_terminal.jar","w") as zf:
+with zipfile.ZipFile("build/console_autocomplete.jar","w") as zf:
 	print("Writing: META-INF/MANIFEST.MF")
 	zf.write("manifest.mf",arcname="META-INF/MANIFEST.MF")
 	for r,_,fl in os.walk("build"):
@@ -42,4 +42,4 @@ with zipfile.ZipFile("build/color_terminal.jar","w") as zf:
 					print(f"Writing: {e}")
 					zf.writestr(e,jf.read(e))
 if ("--run" in sys.argv):
-	subprocess.run(["java","-jar","build/color_terminal.jar"])
+	subprocess.run(["java","-jar","build/console_autocomplete.jar"])
